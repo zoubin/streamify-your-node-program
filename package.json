@@ -1,0 +1,24 @@
+{
+  "name": "stream-handbook",
+  "version": "1.0.0",
+  "description": "node-stream点滴积累",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run lint && tap example/*.js",
+    "lint": "eslint *.js bin/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zoubin/stream-handbook.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zoubin/stream-handbook/issues"
+  },
+  "homepage": "https://github.com/zoubin/stream-handbook#readme",
+  "devDependencies": {
+    "eslint": "^1.10.1",
+    "tap": "^2.3.1"
+  }
+}
