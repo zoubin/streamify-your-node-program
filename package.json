@@ -3,10 +3,6 @@
   "version": "1.0.0",
   "description": "node-stream点滴积累",
   "main": "index.js",
-  "scripts": {
-    "test": "npm run lint && tap example/*.js",
-    "lint": "eslint *.js bin/*.js"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zoubin/stream-handbook.git"
@@ -17,13 +13,10 @@
     "url": "https://github.com/zoubin/stream-handbook/issues"
   },
   "homepage": "https://github.com/zoubin/stream-handbook#readme",
-  "devDependencies": {
-    "eslint": "^1.10.1",
-    "tap": "^2.3.1"
-  },
   "dependencies": {
-    "debug-nexttick": "^0.1.0",
+    "ansi-escape": "^1.1.0",
     "merge-stream": "^1.0.0",
-    "readable-stream": "^2.0.5"
+    "readable-stream": "^2.0.5",
+    "split2": "^1.1.1"
   }
 }

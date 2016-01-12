@@ -1,37 +1,207 @@
 # Node Stream
-对[Node.js](https://nodejs.org/)中
-[stream](https://nodejs.org/api/stream.html)模块的学习积累和理解。
+对[Node.js]中[stream]模块的学习积累和理解。
 
 ## 什么是流
 >A stream is an abstract interface implemented by various objects in Node.js.
 
+这里所谓的“流”，或`stream`，指的是Node.js中`stream`模块提供的接口。
+
+```js
+var Stream = require('stream')
+var Readable = Stream.Readable
+var Writable = Stream.Writable
+var Transform = Stream.Transform
+var Duplex = Stream.Duplex
+
+```
+
+这些接口提供流式的数据处理功能。
+
+流中具体的数据格式，数据如何产生，如何消耗，需要在实现流时，由用户自己定义。
+
+譬如`fs.createReadStream`，其返回对象便是一个`ReadStream`类的实例，
+`ReadStream`继承了`Readable`，并实现了`_read`方法，从而定义了一个具体的可读流。
+
 ## 为什么使用流
-* 内存占用少
-* 提前响应
-* 统一的接口设计。Do one thing and do it well.
-* 灵活的插件机制。[`gulp`]的插件机制, [`browserify`]的插件机制等等。
+**场景**：解析日志，统计其中IE6+7的数量和占比。
+
+给定的输入是一个大约443M的文件`ua.txt`。
+
+可能首先想到的是用`fs.readFile`去读取文件内容，再调用`split('\n')`分隔成行，
+进行检测和统计。
+
+但在第一步便会碰到问题。
+
+```js
+var fs = require('fs')
+fs.readFile('example/ua.txt', function (err, body) {
+  console.log(body)
+  console.log(body.toString())
+})
+
+```
+
+输出：
+```
+⌘ node example/readFile.js
+<Buffer 64 74 09 75 61 09 63 6f 75 6e 74 0a 0a 64 74 09 75 61 09 63 6f 75 6e 74 0a 32 30 31 35 31 32 30 38 09 4d 6f 7a 69 6c 6c 61 2f 35 2e 30 20 28 63 6f 6d ... >
+buffer.js:382
+    throw new Error('toString failed');
+    ^
+
+Error: toString failed
+    at Buffer.toString (buffer.js:382:11)
+    at /Users/zoubin/usr/src/zoub.in/stream-handbook/example/readFile.js:4:20
+    at FSReqWrap.readFileAfterClose [as oncomplete] (fs.js:380:3)
+
+```
+
+可见，在读取大文件时，如果使用`fs.readFile`有以下两个问题：
+* 很可能只能得到一个`Buffer`，而无法将其转为字符串。因为`Buffer`的`size`过大，`toString`报错了。
+* 必须将所有内容都获取，然后才能在从内存中访问。这会占用大量内存，同时开始处理的时间被显著推迟了。
+
+如果文件是几个G，甚至几十个G呢？显然`fs.readFile`无法胜任读取的工作。
+
+在这样的场景下，应当使用`fs.createReadStream`，以流的行式来读取和处理文件：
+
+```js
+// example/parseUA.js
+
+var fs = require('fs')
+var split = require('split2')
+
+fs.createReadStream(__dirname + '/ua.txt')  // 流式读取文件
+  .pipe(split())                            // 分隔成行
+  .pipe(createParser())                     // 逐行解析
+  .pipe(process.stdout)                     // 打印
+
+function createParser() {
+  var Stream = require('stream')
+  var csi = require('ansi-escape')
+  var ie67 = 0
+  var total = 0
+
+  function format() {
+    return csi.cha.eraseLine.escape(
+      'Total: ' + csi.green.escape('%d') +
+      '\t' +
+      'IE6+7: ' + csi.red.escape('%d') +
+      ' (%d%%)',
+      total,
+      ie67,
+      Math.floor(ie67 * 100 / total)
+    )
+  }
+
+  return Stream.Transform({
+    transform: function (line, _, next) {
+      total++
+      line = line.toString()
+      if (/MSIE [67]\.0/.test(line)) {
+        ie67++
+      }
+      next(null, format())
+    },
+  })
+}
+
+```
+
+最终结果：
+```
+⌘ node example/parseUA.js
+Total: 2888380  IE6+7: 783730 (27%)
+
+```
 
 ## Readable
+可读流的功能是作为上游，提供数据给下游。
 
-### 两种使用模式
-可读流通过`push`方法产生数据，存入`stream`的缓存中。
-下游通过监听`data`事件或通过调用`read`方法，从缓存中获取数据进行消耗。
+本文中用`readable`来指代一个`Readable`实例。
 
-可以在`flowing`或`paused`模式去使用可读流。
+### 数据产生方式
+可读流通过`push`方法产生数据，存入`readable`的缓存中。
+当调用`push(null)`时，便宣告了流的数据产生的结束。
+
+正常情况下，需要为流实例提供一个`_read`方法，在这个方法中调用`push`产生数据。
+既可以在同一个tick中（同步）调用`push`，也可以异步的调用（通常如此）。
+
+```js
+var Stream = require('stream')
+
+var readable = Stream.Readable()
+
+var source = ['a', 'b', 'c']
+
+readable._read = function () {
+  this.push(source.shift() || null)
+}
+
+```
+
+在**数据被消耗完**时，会触发`readable`的`end`事件。
+所谓“消耗完”，需要满足两个条件：
+* 已经调用`push(null)`，声明不会再有任何新的数据产生
+* 缓存中的数据也被读取完
+
+```js
+var Stream = require('stream')
+
+var source = ['a', 'b', 'c']
+var readable = Stream.Readable({
+  read: function () {
+    var data = source.shift() || null
+    console.log('push', data)
+    this.push(data)
+  },
+})
+
+readable.on('end', function () {
+  console.log('end')
+})
+
+readable.on('data', function (data) {
+  console.log('data', data)
+})
+
+```
+
+输出：
+```
+⌘ node example/event-end.js
+push a
+push b
+data <Buffer 61>
+push c
+data <Buffer 62>
+push null
+data <Buffer 63>
+end
+
+```
+
+**要点**
+* 调用`push(null)`来结束流，否则下游会一直等待。
+* `push`可以同步调用，也可异步调用。
+* `end`事件表示可读流中的数据已被完全消耗。
+
+### 两种数据消耗模式
+下游通过监听`data`事件（`flowing`模式）或通过调用`read`方法（`paused`模式），
+从缓存中获取数据进行消耗。
 
 #### flowing模式
-在`flowing`模式下，`stream`的数据会持续不断的生产出来，
+在`flowing`模式下，`readable`的数据会持续不断的生产出来，
 每个数据都会触发一次`data`事件，通过监听该事件来获得数据。
 
-以下条件均可以使`stream`进入`flowing`模式：
+以下条件均可以使`readable`进入`flowing`模式：
 * 调用`resume`方法
 * 如果之前未调用`pause`方法进入`paused`模式，则监听`data`事件也会调用`resume`方法。
-* `stream.pipe(writable)`。`pipe`中会监听`data`事件。
+* `readable.pipe(writable)`。`pipe`中会监听`data`事件。
 
 [例子](example/flowing-mode.js)：
 
 ```js
-var Stream = require('readable-stream')
+var Stream = require('stream')
 
 var source = ['a', 'b', 'c']
 
@@ -73,7 +243,7 @@ stream.on('data', function (data) {
 [例子](example/paused-mode.js)：
 
 ```js
-var Stream = require('readable-stream')
+var Stream = require('stream')
 
 var source = ['a', 'b', 'c']
 
@@ -101,14 +271,19 @@ stream.on('readable', function () {
 
 ```
 
-同样，`push`的是`String`和`null`，获得的是`Buffer`。
-
 `readable`事件表示流中产生了新数据，或是到了流的尽头。
 `read(n)`时，会从缓存中试图读取相应的字节数。
 当`n`未指定时，会一次将缓存中的字节全部读取。
 
 如果在`flowing`模式下调用`read()`，不指定`n`时，会逐个元素地将缓存读完，
 而不像`paused`模式会一次全部读取。
+
+### objectMode
+从前两节的例子中可以发现一个现象，
+生产数据时传给`push`的`data`是字符串或`null`，
+而消耗时拿到的却是`Buffer`类型。
+这里，我们便谈谈流中数据类型的问题。
+
 
 ## pipe
 `pipe`方法用于连通上游和下游，使上游的数据能流到指定的下游：`upstream.pipe(downstream)`。
@@ -283,9 +458,10 @@ stream中流动的数据默认只能是以下几种类型：
 * 事件`data`、`readable`、`end`的含义
 
 
+[Node.js]: https://nodejs.org/
+[stream]: https://nodejs.org/api/stream.html
 [`stream-combiner2`]: https://github.com/substack/stream-combiner2
 [`substack#stream-handbook`]: https://github.com/substack/stream-handbook
-[`stream-api`]: https://nodejs.org/api/stream.html
 [`through2`]: https://github.com/rvagg/through2
 [`concat-stream`]: https://github.com/maxogden/concat-stream
 [`duplexer2`]: https://github.com/deoxxa/duplexer2
