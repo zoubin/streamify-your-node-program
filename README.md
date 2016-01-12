@@ -25,7 +25,7 @@ var Duplex = Stream.Duplex
 ## 为什么使用流
 **场景**：解析日志，统计其中IE6+7的数量和占比。
 
-给定的输入是一个大约443M的文件`ua.txt`。
+给定的输入是一个大约400M的文件`ua.txt`。
 
 可能首先想到的是用`fs.readFile`去读取文件内容，再调用`split('\n')`分隔成行，
 进行检测和统计。
@@ -129,6 +129,8 @@ Total: 2888380  IE6+7: 783730 (27%)
 正常情况下，需要为流实例提供一个`_read`方法，在这个方法中调用`push`产生数据。
 既可以在同一个tick中（同步）调用`push`，也可以异步的调用（通常如此）。
 
+在需要数据时，流内部会自动调用`_read`方法来往缓存中添加数据。
+
 ```js
 var Stream = require('stream')
 
@@ -139,6 +141,19 @@ var source = ['a', 'b', 'c']
 readable._read = function () {
   this.push(source.shift() || null)
 }
+
+```
+
+或
+```js
+var Stream = require('stream')
+
+var source = ['a', 'b', 'c']
+var readable = Stream.Readable({
+  read: function () {
+    this.push(source.shift() || null)
+  },
+})
 
 ```
 
@@ -184,7 +199,7 @@ end
 ```
 
 **要点**
-* 调用`push(null)`来结束流，否则下游会一直等待。
+* 必须调用`push(null)`来结束流，否则下游会一直等待。
 * `push`可以同步调用，也可异步调用。
 * `end`事件表示可读流中的数据已被完全消耗。
 
@@ -208,13 +223,13 @@ var Stream = require('stream')
 
 var source = ['a', 'b', 'c']
 
-var stream = Stream.Readable({
+var readable = Stream.Readable({
   read: function () {
     this.push(source.shift() || null)
   },
 })
 
-stream.on('data', function (data) {
+readable.on('data', function (data) {
   console.log(data)
 })
 
@@ -233,9 +248,9 @@ stream.on('data', function (data) {
 通常，并不直接监听`data`事件去消耗流，而是通过[`pipe`](#pipe)方法去消耗。
 
 #### paused模式
-在`paused`模式下，通过`stream.read`去获取数据。
+在`paused`模式下，通过`readable.read`去获取数据。
 
-以下条件均可使`stream`进入`paused`模式：
+以下条件均可使`readable`进入`paused`模式：
 * 流创建完成，即初始状态
 * 在`flowing`模式下调用`pause`方法
 * 通过`unpipe`移除所有下游
@@ -250,13 +265,13 @@ var Stream = require('stream')
 
 var source = ['a', 'b', 'c']
 
-var stream = Stream.Readable({
+var readable = Stream.Readable({
   read: function () {
     this.push(source.shift() || null)
   },
 })
 
-stream.on('readable', function () {
+readable.on('readable', function () {
   var data
   while (data = this.read()) {
     console.log(data)
@@ -286,13 +301,132 @@ stream.on('readable', function () {
 * 监听`data`事件和`end`事件
 * 调用`pipe()`方法
 
-### objectMode
-从前两节的例子中可以发现一个现象，
+## Writable
+可写流的功能是作为下游，消耗上游提供的数据。
+
+本文中用`writable`来指代一个`Writable`实例。
+
+### 实现可写流与使用可写流
+与`Readable`类似，需要为`writable`实现一个`_write`方法，
+来实现一个具体的可写流。
+
+在写入数据（调用`writable.write(data)`）时，
+会调用`_write`方法来处理数据。
+
+```js
+var Stream = require('stream')
+
+var writable = Stream.Writable({
+  write: function (data, _, next) {
+    console.log(data)
+    process.nextTick(next)
+  },
+})
+
+writable.write('a')
+writable.write('b')
+writable.write('c')
+writable.end()
+
+```
+
+或：
+```js
+var Stream = require('stream')
+
+var writable = Stream.Writable()
+
+writable._write = function (data, _, next) {
+  console.log(data)
+  process.nextTick(next)
+}
+
+writable.write('a')
+writable.write('b')
+writable.write('c')
+writable.end()
+
+```
+
+输出：
+```
+⌘ node example/writable.js
+<Buffer 61>
+<Buffer 62>
+<Buffer 63>
+
+```
+
+**实现要点**
+* `_write(data, _, next)`中调用`next(err)`来声明“写入”操作已完成，
+  可以开始写入下一个数据。
+* `next`的调用时机可以是异步的。
+
+**使用要点**
+* 调用`write(data)`方法来往`writable`中写入数据。将触发`_write`的调用，将数据写入底层。
+* 必须调用`end()`方法来告诉`writable`，所有数据均已写入。
+
+### 写操作完成事件
+与`Readable`的`end`事件类似，`Writable`有两个事件来表示所有写入完成的状况：
+
+```js
+var Stream = require('stream')
+
+var writable = Stream.Writable({
+  write: function (data, _, next) {
+    console.log(data)
+    next()
+  },
+})
+
+writable.on('finish', function () {
+  console.log('finish')
+})
+
+writable.on('prefinish', function () {
+  console.log('prefinish')
+})
+
+writable.write('a', function () {
+  console.log('write a')
+})
+writable.write('b', function () {
+  console.log('write b')
+})
+writable.write('c', function () {
+  console.log('write c')
+})
+writable.end()
+
+```
+
+输出：
+```
+⌘ node example/event-finish.js
+<Buffer 61>
+<Buffer 62>
+<Buffer 63>
+prefinish
+write a
+write b
+write c
+finish
+
+```
+
+**要点**
+* `prefinish`事件。表示所有数据均已写入底层系统，即最后一次`_write`的调用，其`next`已被执行。此时，不会再有新的数据写入，缓存中也无积累的待写数据。
+* `finish`事件。在`prefinish`之后，表示所有在调用`write(data, cb)`时传入的`cb`均已执行完。
+* 一般监听`finish`事件，来判断写操作完成。
+
+## objectMode
+在介绍[`Readable`](#readable)时，从例子中可以发现一个现象，
 生产数据时传给`push`的`data`是字符串或`null`，
 而消耗时拿到的却是`Buffer`类型。
-这里，我们便谈谈流中数据类型的问题。
+接下来探讨一下流中数据类型的问题。
 
-在创建流时，可指定一个`objectMode`选项为`true`。
+### Readable({ objectMode: true })
+在创建可读流时，可指定`objectMode`选项为`true`。
 此时，称为一个`objectMode`流。
 否则，称其为一个非`objectMode`流。
 
@@ -323,7 +457,7 @@ stream.on('readable', function () {
 
 这里看一个比较有意思的例子来说明`objectMode`与非`objectMode`的区别。
 
-非`objectMode`下`push('')`
+非`objectMode`下`push('')`：
 ```js
 var Stream = require('stream')
 
@@ -356,7 +490,7 @@ end
 
 ```
 
-`objectMode`下`push('')`
+`objectMode`下`push('')`：
 ```js
 var Stream = require('stream')
 
@@ -402,10 +536,99 @@ end
 * 非`objectMode`时，只能`push`以下数据类型：`String`, `Buffer`, `Null`, `Undefined`。
   在消耗时只能拿到`Buffer`类型的数据
 
+### Writable({ objectMode: true })
+
+## highWaterMark
 
 ## pipe
 `pipe`方法用于连通上游和下游，使上游的数据能流到指定的下游：`upstream.pipe(downstream)`。
 上游必须是可读的，下游必须是可写的。
+
+### 可读流与可写流配合使用
+再看看如何将前面创建的可读流与可写流结合使用。
+
+事件关联：
+
+```js
+var Stream = require('readable-stream')
+
+var readable = createReadable()
+var writable = createWritable()
+
+readable.on('data', function (data) {
+  writable.write(data)
+})
+readable.on('end', function (data) {
+  writable.end()
+})
+
+writable.on('finish', function () {
+  console.log('done')
+})
+
+function createWritable() {
+  return Stream.Writable({
+    write: function (data, _, next) {
+      console.log(data)
+      next()
+    },
+  })
+}
+
+function createReadable() {
+  var source = ['a', 'b', 'c']
+
+  return Stream.Readable({
+    read: function () {
+      process.nextTick(this.push.bind(this), source.shift() || null)
+    },
+  })
+}
+
+```
+
+输出：
+```
+⌘ node example/readable-with-writable.js
+<Buffer 61>
+<Buffer 62>
+<Buffer 63>
+done
+
+```
+
+还可以使用`pipe`关联：
+```js
+var Stream = require('readable-stream')
+
+var readable = createReadable()
+var writable = createWritable()
+
+readable.pipe(writable).on('finish', function () {
+  console.log('done')
+})
+
+function createWritable() {
+  return Stream.Writable({
+    write: function (data, _, next) {
+      console.log(data)
+      next()
+    },
+  })
+}
+
+function createReadable() {
+  var source = ['a', 'b', 'c']
+
+  return Stream.Readable({
+    read: function () {
+      process.nextTick(this.push.bind(this), source.shift() || null)
+    },
+  })
+}
+
+```
+
 
 ### 工作原理
 
@@ -513,52 +736,6 @@ process.nextTick(wait.end.bind(wait))
 自己才会结束，所以便可以通过添加一个空的`stream`来控制`upstream`的结束时机。
 
 
-## objectMode
-创建流时可以提供`objectMode`选项，
-如果为真的话，流中的数据便可以是任意类型，
-即`push`了怎样的数据，下游获取到的便是怎样的数据，
-不会做任何编码转换。
-
-#### 普通模式的Readable stream
-
-```js
-var Stream = require('stream')
-
-// options.objectMode不为真
-var normalModeRs = Stream.Readable(options)
-
-normalModeRs.push(data, encoding)
-
-```
-
-最重要的特性：
-
-`data`的类型只能是`Buffer`, `String`, `Null`, `Undefined`其中之一。
-
-`data`会经过过编码，再存入`stream`的内部缓存，
-下游消耗数据时，从缓存中取。
-
-所以，
-
-
-`encoding`默认为`utf8`（可通过`options.defaultEncoding`设置，一般无必要）
-
-如果`data`为`String`类型，在存入内部缓存时
-
-
-stream中流动的数据默认只能是以下几种类型：
-* `Buffer`
-* `String`
-* `null`
-* `undefined`
-
-也就是说，
-在创建`Readable`调用`push`方法提供数据时，
-或者是往`Writable`中`write`数据时，
-只能接受以上类型的数据。
-
-默认情况下，都会
-
 ### writable
 * `objectMode`的含义
 * `highWaterMark`的含义
@@ -587,3 +764,9 @@ stream中流动的数据默认只能是以下几种类型：
 [`merge-stream`]: https://github.com/grncdr/merge-stream
 [`gulp`]: https://github.com/gulpjs/gulp
 [`browserify`]: https://github.com/substack/node-browserify
+
+## Duplex
+
+## Transform
+
+
