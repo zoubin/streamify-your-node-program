@@ -19,7 +19,7 @@ var Duplex = Stream.Duplex
 
 流中具体的数据格式，数据如何产生，如何消耗，需要在实现流时，由用户自己定义。
 
-譬如`fs.createReadStream`，其返回对象便是一个`ReadStream`类的实例，
+譬如`fs.createReadStream`，其返回对象便是一个`ReadStream`类的实例。
 `ReadStream`继承了`Readable`，并实现了`_read`方法，从而定义了一个具体的可读流。
 
 ## 为什么使用流
@@ -58,7 +58,7 @@ Error: toString failed
 
 可见，在读取大文件时，如果使用`fs.readFile`有以下两个问题：
 * 很可能只能得到一个`Buffer`，而无法将其转为字符串。因为`Buffer`的`size`过大，`toString`报错了。
-* 必须将所有内容都获取，然后才能在从内存中访问。这会占用大量内存，同时开始处理的时间被显著推迟了。
+* 必须将所有内容都获取，然后才能从内存中访问。这会占用大量内存，同时， 处理的开始时刻被推迟了。
 
 如果文件是几个G，甚至几十个G呢？显然`fs.readFile`无法胜任读取的工作。
 
@@ -113,6 +113,9 @@ function createParser() {
 Total: 2888380  IE6+7: 783730 (27%)
 
 ```
+
+**要点**
+* 大数据情况下必须使用流式处理
 
 ## Readable
 可读流的功能是作为上游，提供数据给下游。
@@ -278,11 +281,126 @@ stream.on('readable', function () {
 如果在`flowing`模式下调用`read()`，不指定`n`时，会逐个元素地将缓存读完，
 而不像`paused`模式会一次全部读取。
 
+#### 要点
+两种最常见的消耗可读流的方法：
+* 监听`data`事件和`end`事件
+* 调用`pipe()`方法
+
 ### objectMode
 从前两节的例子中可以发现一个现象，
 生产数据时传给`push`的`data`是字符串或`null`，
 而消耗时拿到的却是`Buffer`类型。
 这里，我们便谈谈流中数据类型的问题。
+
+在创建流时，可指定一个`objectMode`选项为`true`。
+此时，称为一个`objectMode`流。
+否则，称其为一个非`objectMode`流。
+
+这个选项将影响`push(data)`中`data`的类型，以及消耗时获得的数据的类型：
+* 在非`objectMode`时，`data`只能是`String`, `Buffer`, `Null`, `Undefined`。
+  同时，消耗时获得的数据一定是`Buffer`类型。
+* 在`objectMode`时，`data`可以是任意类型，`null`仍然有其特殊含义。
+  同时，消耗时获得的数据与`push`进来的一样。实际就是同一个引用。
+
+所谓“缓存”，其实也就是一个数组。可以看看`readable._readableState.buffer`。
+
+每次调用`push(data)`时，如果是`objectMode`，便直接调用`state.buffer.push(data)`。
+这里，`state = readable._readableState`。
+
+如果是非`objectMode`，会将`String`类型转成`Buffer`，再调用`state.buffer.push(chunk)`。
+这里，`chunk`即转换后的`Buffer`对象。
+默认会以`utf8`的编码形式进行转换。
+设置方法查[文档](https://nodejs.org/api/stream.html#stream_new_stream_readable_options)即可。
+一般不需要。
+
+在消耗`objectMode`流时，不管是`flowing`模式，还是`paused`模式，
+都等同于调用`state.buffer.shift()`拿到数据。
+保证`push`产生的数据会被一一消耗。
+
+在消耗非`objectMode`流时，`flowing`模式仍然等同于调用`state.buffer.shift()`。
+但`paused`模式则会拼接字节数，以满足`readable.read(n)`中`n`的要求。
+如果`n`没指定，则会一次将`state.buffer`所有字节拼起来消耗掉。
+
+这里看一个比较有意思的例子来说明`objectMode`与非`objectMode`的区别。
+
+非`objectMode`下`push('')`
+```js
+var Stream = require('stream')
+
+var source = ['a', '', 'c']
+var readable = Stream.Readable({
+  read: function () {
+    var data = source.shift()
+    data = data == null ? null : data
+    this.push(data)
+  },
+})
+
+readable.on('end', function () {
+  console.log('end')
+})
+
+readable.on('data', function (data) {
+  console.log('data', data)
+})
+
+
+```
+
+输出：
+```
+⌘ node example/empty-string-non-objectMode.js
+data <Buffer 61>
+data <Buffer 63>
+end
+
+```
+
+`objectMode`下`push('')`
+```js
+var Stream = require('stream')
+
+var source = ['a', '', 'c']
+var readable = Stream.Readable({
+  objectMode: true,
+  read: function () {
+    var data = source.shift()
+    data = data == null ? null : data
+    this.push(data)
+  },
+})
+
+readable.on('end', function () {
+  console.log('end')
+})
+
+readable.on('data', function (data) {
+  console.log('data', data)
+})
+
+```
+
+输出：
+```
+⌘ node example/empty-string-objectMode.js
+data a
+data
+data c
+end
+
+```
+
+可见，非`objectMode`下直接将`push('')`给忽略了，
+而`objectMode`下在消耗时能拿到这个空字符串。
+
+（注意，非`objectMode`时`push('')`实际是会修改内部状态的，
+会有一定的副作用，一般不要如此。
+见[这里](https://nodejs.org/api/stream.html#stream_stream_push)）
+
+**要点**
+* `objectMode`时，可`push`任意类型的数据，消耗时会逐个消耗同样的数据
+* 非`objectMode`时，只能`push`以下数据类型：`String`, `Buffer`, `Null`, `Undefined`。
+  在消耗时只能拿到`Buffer`类型的数据
 
 
 ## pipe
