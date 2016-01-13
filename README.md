@@ -615,7 +615,7 @@ c
 如果下游不是`objectMode`，就必须注意，不要输出非`String`或`Buffer`的数据。
 
 ## highWaterMark
-前面介绍了`Readable`与`Writable`的创建方法、使用方式，以即如何控制流中的数据类型，
+前面介绍了`Readable`与`Writable`的创建方法、使用方式，以及如何控制流中的数据类型，
 其中多次提到“缓存”，这部分将探究一下这个“缓存”为何物，为什么会存在。
 
 ### Readable中的缓存
