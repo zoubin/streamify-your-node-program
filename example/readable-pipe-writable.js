@@ -1,4 +1,4 @@
-var Stream = require('readable-stream')
+var Stream = require('stream')
 
 var readable = createReadable()
 var writable = createWritable()
@@ -21,7 +21,11 @@ function createReadable() {
 
   return Stream.Readable({
     read: function () {
-      process.nextTick(this.push.bind(this), source.shift() || null)
+      var self = this
+      process.nextTick(function () {
+        var data = source.shift() || null
+        self.push(data)
+      })
     },
   })
 }

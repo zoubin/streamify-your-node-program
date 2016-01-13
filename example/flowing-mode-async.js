@@ -1,14 +1,14 @@
-var Stream = require('readable-stream')
+var Stream = require('stream')
 
 var source = ['a', 'b', 'c']
 
-var stream = Stream.Readable({
+var readable = Stream.Readable({
   read: function () {
     process.nextTick(this.push.bind(this), source.shift() || null)
   },
 })
 
-stream.on('data', function (data) {
+readable.on('data', function (data) {
   console.log(data)
 })
 

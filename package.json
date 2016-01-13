@@ -16,7 +16,6 @@
   "dependencies": {
     "ansi-escape": "^1.1.0",
     "merge-stream": "^1.0.0",
-    "readable-stream": "^2.0.5",
     "split2": "^1.1.1"
   }
 }
