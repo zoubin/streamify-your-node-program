@@ -17,6 +17,8 @@
   - [对Writable的影响](#对writable的影响)
   - [什么时候用objectMode](#什么时候用objectmode)
 - [highWaterMark](#highwatermark)
+  - [Readable中的缓存](#readable中的缓存)
+  - [Writable中的缓存](#writable中的缓存)
 - [pipe](#pipe)
 - [Duplex](#duplex)
 - [Transform](#transform)
@@ -765,6 +767,29 @@ buffer after push []
 
 在`emit('data')`后，会立即调用`read(0)`，触发下一次的`_read`调用。
 于是，数据便源源不断的产生，直到`push(null)`。
+
+### Writable中的缓存
+```js
+var writable = Writable({ highWaterMark: highWaterMark })
+var state = writable._writableState
+
+```
+
+前面解释了`Readable`中`highWaterMark`的作用：
+控制底层读取的速度。
+
+`Writable`中`highWaterMark`的作用也是控制速度：
+当`state.length`大于`highWaterMark`时，`write(data)`会返回`false`，
+上游可以判断这个返回值，停止往`writable`中写数据，
+同时监听`drain`事件触发再继续写。
+
+`Writable`的缓存实际是一个待写入数据队列，
+`state.length`也就是这个队列的长度。
+每次底层的写操作完成时，检查`state.length`，
+如果为0，则有可能触发`drain`事件。
+
+这个“有可能”，便是之前出现了`state.length`大于`highWaterMark`的情况，
+外面还在等待`drain`事件。
 
 
 ## pipe
