@@ -20,6 +20,8 @@
   - [Readable中的缓存](#readable中的缓存)
   - [Writable中的缓存](#writable中的缓存)
 - [pipe](#pipe)
+  - [pipe的使用](#pipe的使用)
+  - [从push到pull](#从push到pull)
 - [Duplex](#duplex)
 - [Transform](#transform)
 
@@ -793,11 +795,12 @@ var state = writable._writableState
 
 
 ## pipe
-`pipe`方法用于连通上游和下游，使上游的数据能流到指定的下游：`upstream.pipe(downstream)`。
+可读流提供了一个`pipe`方法，用于连接另一个可写流。
+即`pipe`方法用于连通上游和下游，使上游的数据能流到指定的下游：`readable.pipe(writable)`。
 上游必须是可读的，下游必须是可写的。
 
-### 可读流与可写流配合使用
-再看看如何将前面创建的可读流与可写流结合使用。
+### pipe的使用
+有两种方法将一个可读流与一个可写流连接起来。
 
 事件关联：
 
@@ -881,128 +884,47 @@ function createReadable() {
 
 ```
 
+可见，`pipe`方法自动处理了`data`, `end`, `write`等事件和方法，
+使得关联变得更简单。
 
-### 工作原理
+### 从push到pull
+但其实`pipe`做了更多的事。
 
-#### 使数据从上游流向下游
-监听`upstream`的`data`事件，将获得的数据写入`downstream`。
+如果是前面的第一个例子，可读流的数据会毫不间断的持续写进可写流中，
+而不管可写流的缓存状态如何。
+这样，是达不到控制内存的效果的。
 
-当数据耗尽时，给下游结束信号（即自动调用`downstream.end()`，可通过`pipe`的第二个参数修改这个行为）。
-
-#### 响应下游反馈
-前面一步中数据的生产速度取决于上游，但是下游的消耗速度不一定跟得上，
-未能及时消耗的数据便会存储至`downstream`的缓存中。
-如果不做任何处理，这个缓存可能会快速膨胀，耗掉大量内存，下游的压力就变得很大。
-
-所以，需要将下游的消耗情况反馈给上游，在必要的时候让上游暂停数据的生产：
-
-在调用`downstream.write(data)`时，如果返回`false`（表示`downstream`缓存已到临界点），
-便调用`upstream.pause()`，使上游进入`paused`模式，暂停数据的生产，同时等待下游的继续信号（即监听`downstream`的`drain`事件），
-一旦
-
-正是因为这个反馈的功能的存在，所以很多情况下推荐直接使用`pipe`方法去连接两个流。
-
-### 使用案例
-`pipe`最简单的使用情况便是：
+而`pipe`做了另一件更重要的事，类似于：
 
 ```js
-a.pipe(b).pipe(c)
+readable.on('data', function (data) {
+  var ret = writable.write(data)
+  if (ret === false) {
+    readable.pause()
+  }
+})
+
+writable.on('drain', function () {
+  readable.state.flowing = true
+  flow(readable)
+})
 
 ```
 
-这种链式写法之所以正确，是因为`pipe`方法会返回下游的`stream`对象。
-所以，当下游（如此处的`b`）是一个既可写双可读的流（如`Transform`或`Duplex`）时，
-便可以链起来了。
+当`writable.write(data)`返回`false`时，表示可写流中缓存队列的长度已经到达了临界值（`highWaterMark`），
+此时，需要暂停`readable`的数据输出，等待`writable`清空其缓存。
 
-#### 多个下游
-从前面的原理介绍中，可以知道，`pipe`会通过监听`data`事件的方式，
-在`flowing`模式下消耗上游的数据。
-所以，我们还可以这样：
+前面两个例子的差别，可用喝饮料来打个比方。
 
-```js
-a.pipe(b)
-a.pipe(c)
+第一个例子是bottom up，一仰头，杯底朝天，饮料持续push进嘴里。可称之为push流。
 
-```
+第二个例子是用吸管，嘴里注满时，停一停，咽下去再继续pull。可称之为pull流。
 
-这样，`a`产生的数据会出来两份，分别给两个下游`b`和`c`。
+这样一个转变，就让数据的生产、消耗形成了一个闭环。
+只有当数据有一定的消耗时，才会再继续生产。
 
-这里需要注意的是：
-* `b`或`c`中有一个要求暂停时，`a`便会暂停。
-* 所谓两份数据，在非字符串类型的情况下，实际是一份数据的两份引用。
+所以，使用流时，一定要确保下游正常消耗数据，否则整个流程会停滞。
 
-#### 多个上游
-自然，还可以这样：
-
-```js
-a.pipe(c)
-b.pipe(c)
-
-```
-
-不过实际上不会这么用。前面在原理中介绍过，
-`pipe`在上游结束时会自动调用下游的`end`方法。
-当`c`被`a`结束时，`b`便不能再往`c`中写数据了（这是`Writable`的特性）。
-
-但这种合并多个流的需求是真实存在的。可以这样去做：
-```js
-a.pipe(c, { end: false })
-b.pipe(c, { end: false })
-
-a.once('end', remove)
-b.once('end', remove)
-
-```
-
-不让上游结束下游，同时维护一下还未结束的上游数目，
-减少到为0时，再结束下游。
-
-这个便是[`merge-stream`]这个工具所做的事。
-
-```js
-merge(a, b).pipe(c)
-
-```
-
-还可能碰到一种情况，即上游数是动态增加的。
-可以这么使用：
-
-```js
-var wait = require('stream').PassThough()
-var upstream = merge(wait)
-
-upstream.pipe(c)
-
-// 异步添加a作为上游
-process.nextTick(upstream.add.bind(upstream), a)
-
-// 异步添加b作为上游
-process.nextTick(upstream.add.bind(upstream), b)
-
-// 确定不会再增加上游时
-process.nextTick(wait.end.bind(wait))
-
-```
-
-由于合并多个上游得到的`upstream`要等所有上游结束，
-自己才会结束，所以便可以通过添加一个空的`stream`来控制`upstream`的结束时机。
-
-
-### writable
-* `objectMode`的含义
-* `highWaterMark`的含义
-* `.write()`返回值的含义
-* `.end()`的含义
-* 事件`drain`、`finish`、`prefinish`的含义
-
-### readable
-* flowing mode, paused mode
-* `objectMode`的含义
-* `highWaterMark`的含义
-* `.read()`返回值的含义
-* `.push()`的含义
-* `.pipe()`, `unpipe()`的含义
-* 事件`data`、`readable`、`end`的含义
 
 
 [Node.js]: https://nodejs.org/
