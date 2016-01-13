@@ -1,6 +1,23 @@
 # Node Stream
 对[Node.js]中[stream]模块的学习积累和理解。
 
+- [什么是流](#什么是流)
+- [为什么使用流](#为什么使用流)
+- [Readable](#readable)
+  - [如何创建](#如何创建)
+  - [如何使用](#如何使用)
+- [Writable](#writable)
+  - [创建与使用](#创建与使用)
+  - [写操作完成事件](#写操作完成事件)
+- [objectMode](#objectmode)
+  - [对Readable的影响](#对Readable的影响)
+  - [对Writable的影响](#对Writable的影响)
+  - [什么时候用objectMode](#什么时候用objectMode)
+- [highWaterMark](#highwatermark)
+- [pipe](#pipe)
+- [Duplex](#duplex)
+- [Transform](#transform)
+
 ## 什么是流
 >A stream is an abstract interface implemented by various objects in Node.js.
 
@@ -122,7 +139,7 @@ Total: 2888380  IE6+7: 783730 (27%)
 
 本文中用`readable`来指代一个`Readable`实例。
 
-### 数据产生方式
+### 如何创建
 可读流通过`push`方法产生数据，存入`readable`的缓存中。
 当调用`push(null)`时，便宣告了流的数据产生的结束。
 
@@ -203,7 +220,7 @@ end
 * `push`可以同步调用，也可异步调用。
 * `end`事件表示可读流中的数据已被完全消耗。
 
-### 两种数据消耗模式
+### 如何使用
 下游通过监听`data`事件（`flowing`模式）或通过调用`read`方法（`paused`模式），
 从缓存中获取数据进行消耗。
 
@@ -306,7 +323,7 @@ readable.on('readable', function () {
 
 本文中用`writable`来指代一个`Writable`实例。
 
-### 实现可写流与使用可写流
+### 创建与使用
 与`Readable`类似，需要为`writable`实现一个`_write`方法，
 来实现一个具体的可写流。
 
@@ -432,7 +449,9 @@ finish
 
 更多内容见[文档](https://nodejs.org/api/stream.html#stream_object_mode)
 
-### Readable({ objectMode: true })
+### 对Readable的影响
+`Readable({ objectMode: true })`
+
 这个选项将影响`push(data)`中`data`的类型，以及消耗时获得的数据的类型：
 * 在非`objectMode`时，`data`只能是`String`, `Buffer`, `Null`, `Undefined`。
   同时，消耗时获得的数据一定是`Buffer`类型。
@@ -540,7 +559,9 @@ end
 * 非`objectMode`时，只能`push`以下数据类型：`String`, `Buffer`, `Null`, `Undefined`。
   在消耗时只能拿到`Buffer`类型的数据
 
-### Writable({ objectMode: true })
+### 对Writable的影响
+`Writable({ objectMode: true })`
+
 这个选项将影响`write(data)`中`data`的类型，以及底层消耗时获得的数据(`_write(chunk, _, next)`中的`chunk`)的类型：
 * 在非`objectMode`时，`data`只能是`String`, `Buffer`, `Null`, `Undefined`。
   同时，`chunk`一定是`Buffer`类型。
