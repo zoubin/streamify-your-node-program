@@ -5,10 +5,13 @@
 - [为什么使用流](#为什么使用流)
 - [Readable](#readable)
   - [如何创建](#如何创建)
+    - [end事件](#end事件)
   - [如何使用](#如何使用)
+    - [flowing模式](#flowing模式)
+    - [paused模式](#paused模式)
 - [Writable](#writable)
   - [创建与使用](#创建与使用)
-  - [写操作完成事件](#写操作完成事件)
+  - [finish事件](#finish事件)
 - [objectMode](#objectmode)
   - [对Readable的影响](#对readable的影响)
   - [对Writable的影响](#对writable的影响)
@@ -174,7 +177,8 @@ var readable = Stream.Readable({
 
 ```
 
-在**数据被消耗完**时，会触发`readable`的`end`事件。
+#### end事件
+在**数据被消耗完**时，会触发`end`事件。
 所谓“消耗完”，需要满足两个条件：
 * 已经调用`push(null)`，声明不会再有任何新的数据产生
 * 缓存中的数据也被读取完
@@ -313,11 +317,6 @@ readable.on('readable', function () {
 如果在`flowing`模式下调用`read()`，不指定`n`时，会逐个元素地将缓存读完，
 而不像`paused`模式会一次全部读取。
 
-#### 要点
-两种最常见的消耗可读流的方法：
-* 监听`data`事件和`end`事件
-* 调用`pipe()`方法
-
 ## Writable
 可写流的功能是作为下游，消耗上游提供的数据。
 
@@ -383,7 +382,7 @@ writable.end()
 * 调用`write(data)`方法来往`writable`中写入数据。将触发`_write`的调用，将数据写入底层。
 * 必须调用`end()`方法来告诉`writable`，所有数据均已写入。
 
-### 写操作完成事件
+### finish事件
 与`Readable`的`end`事件类似，`Writable`有两个事件来表示所有写入完成的状况：
 
 ```js
