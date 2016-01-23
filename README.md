@@ -22,9 +22,9 @@
 - [pipe](docs/pipe.md)
   - [pipe的使用](docs/pipe.md#pipe的使用)
   - [从push到pull](docs/pipe.md#从push到pull)
+  - [pipeline](docs/pipe.md#pipeline)
 - [Duplex](docs/duplex.md)
 - [Transform](docs/transform.md)
-- [Pipeline](docs/pipeline.md)
 
 [Node.js]: https://nodejs.org/
 [stream]: https://nodejs.org/api/stream.html
