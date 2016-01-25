@@ -1,4 +1,12 @@
 # Tools
+- [`through2`]
+- [`merge-stream`]
+- [`concat-stream`]
+- [`sink-transform`]
+- [`duplexer2`]
+- [`stream-combiner2`]
+- [`stream-splicer`]
+- [`labeled-stream-splicer`]
 
 ## through2
 [`through2`]可用来方便的创建一个`Transform`。
