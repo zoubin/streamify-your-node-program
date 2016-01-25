@@ -160,7 +160,7 @@ function tryWrapper(wrapper, opts) {
 
 ```
 
-在得到模块函数`compiledWrapper`后，例构造了其接受的参数，并调用它。
+在得到模块函数`compiledWrapper`后，构造其接受的参数，并调用它。
 如此，算是加载完了一个Node模块。
 
 `require`函数的构造如下：
