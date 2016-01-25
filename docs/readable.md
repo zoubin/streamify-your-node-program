@@ -80,11 +80,6 @@ end
 
 ```
 
-**要点**
-* 必须调用`push(null)`来结束流，否则下游会一直等待。
-* `push`可以同步调用，也可异步调用。
-* `end`事件表示可读流中的数据已被完全消耗。
-
 ### 如何使用
 下游通过监听`data`事件（`flowing`模式）或通过调用`read`方法（`paused`模式），
 从缓存中获取数据进行消耗。
@@ -97,8 +92,6 @@ end
 * 调用`resume`方法
 * 如果之前未调用`pause`方法进入`paused`模式，则监听`data`事件也会调用`resume`方法。
 * `readable.pipe(writable)`。`pipe`中会监听`data`事件。
-
-[例子](js/flowing-mode.js)：
 
 ```js
 var Stream = require('stream')
@@ -140,8 +133,6 @@ readable.on('data', function (data) {
 除了初始状态外，很少会在`paused`模式下使用流。
 一般不会调用`pause`方法或是`unpipe`方法从`flowing`模式切换至`paused`模式。
 
-[例子](js/paused-mode.js)：
-
 ```js
 var Stream = require('stream')
 
@@ -177,4 +168,11 @@ readable.on('readable', function () {
 
 如果在`flowing`模式下调用`read()`，不指定`n`时，会逐个元素地将缓存读完，
 而不像`paused`模式会一次全部读取。
+
+### 小结
+* 使用`push`来产生数据。
+* 必须调用`push(null)`来结束流，否则下游会一直等待。
+* `push`可以同步调用，也可异步调用。
+* `end`事件表示可读流中的数据已被完全消耗。
+* 通常在flowing模式下使用可读流。
 

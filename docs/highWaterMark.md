@@ -27,7 +27,6 @@ var state = readable._readableState
 便会执行`readable._read(highWaterMark)`从底层读取数据存入缓存中。
 
 #### 一个同步的例子
-[代码](js/highWaterMark.js)
 
 ```js
 var Stream = require('stream')
@@ -98,7 +97,6 @@ consume <Buffer 63>
 于是事件回调被执行，数据被消耗。
 
 #### 一个异步的例子
-[代码](js/highWaterMark-async.js)
 
 ```js
 var Stream = require('stream')

@@ -43,7 +43,6 @@
 这里看一个比较有意思的例子来说明`objectMode`与非`objectMode`的区别。
 
 非`objectMode`下`push('')`
-[代码](js/empty-string-non-objectMode.js)
 
 ```js
 var Stream = require('stream')
@@ -78,7 +77,6 @@ end
 ```
 
 `objectMode`下`push('')`
-[代码](js/empty-string-objectMode.js)
 
 ```js
 var Stream = require('stream')

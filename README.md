@@ -19,12 +19,15 @@
 - [highWaterMark](docs/highWaterMark.md)
   - [Readable中的缓存](docs/highWaterMark.md#readable中的缓存)
   - [Writable中的缓存](docs/highWaterMark.md#writable中的缓存)
+- [Duplex和Transform](docs/duplex-and-transform.md)
+  - [Duplex](docs/pipe.md#duplex)
+  - [Transform](docs/pipe.md#transform)
+  - [Transform与Duplex比较](docs/pipe.md#transform与duplex比较)
 - [pipe](docs/pipe.md)
   - [pipe的使用](docs/pipe.md#pipe的使用)
   - [从push到pull](docs/pipe.md#从push到pull)
   - [pipeline](docs/pipe.md#pipeline)
-- [Duplex](docs/duplex.md)
-- [Transform](docs/transform.md)
+- [Node实现的CommonJS规范](docs/node-module.md)
 
 [Node.js]: https://nodejs.org/
 [stream]: https://nodejs.org/api/stream.html

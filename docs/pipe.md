@@ -132,8 +132,6 @@ writable.on('drain', function () {
 ## Pipeline
 创建了多个流后，用`pipe`将其连接起来，便形成了一个`pipeline`。
 
-[代码](js/pipeline.js)
-
 ```js
 var Stream = require('stream')
 
@@ -187,4 +185,6 @@ function src() {
 CBA
 
 ```
+
+当然，中间环节的流，必须是既可写又可读的，即`Duplex`或`Transform`。
 
