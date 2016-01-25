@@ -16,8 +16,10 @@
   "dependencies": {
     "ansi-escape": "^1.1.0",
     "browserify": "^13.0.0",
+    "concat-stream": "^1.5.1",
     "gulp": "^3.9.0",
     "merge-stream": "^1.0.0",
+    "sink-transform": "^1.0.0",
     "split2": "^1.1.1",
     "through2": "^2.0.0"
   }

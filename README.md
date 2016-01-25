@@ -27,14 +27,14 @@
   - [pipe的使用](docs/pipe.md#pipe的使用)
   - [从push到pull](docs/pipe.md#从push到pull)
   - [pipeline](docs/pipe.md#pipeline)
-- [Node实现的CommonJS规范](docs/node-module.md)
-- 实战技巧
-  - [browserify](docs/browserify.md)
-    - [需求](docs/browserify.md#需求)
-    - [pipeline设计](docs/browserify.md#pipeline设计)
-    - [插件机制](docs/browserify.md#插件机制)
-    - [Transform机制](docs/browserify.md#transform机制)
-  - [tools](docs/tools.md)
+- [常用工具](docs/tools.md)
+- [Browserify](docs/browserify.md)
+  - [需求](docs/browserify.md#需求)
+  - [pipeline设计](docs/browserify.md#pipeline设计)
+  - [插件机制](docs/browserify.md#插件机制)
+  - [Transform机制](docs/browserify.md#transform机制)
+- 附录
+  - [Node实现的CommonJS规范](docs/node-module.md)
 
 [Node.js]: https://nodejs.org/
 [stream]: https://nodejs.org/api/stream.html
