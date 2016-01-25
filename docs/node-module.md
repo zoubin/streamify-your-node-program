@@ -69,6 +69,7 @@ Module._load = function(request, parent, isMain) {
 ```
 
 该函数的功能步骤是：
+
 1. 解析文件绝对路径（`Module._resolveFilename`）
 1. 检查缓存，如果有，直接返回缓存结果
 1. 检查是否原生模块，如果是，则返回原生模块的结果。
