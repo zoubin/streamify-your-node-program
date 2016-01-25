@@ -30,6 +30,10 @@
 - [Node实现的CommonJS规范](docs/node-module.md)
 - 实战技巧
   - [browserify](docs/browserify.md)
+    - [需求](docs/browserify.md#需求)
+    - [pipeline设计](docs/browserify.md#pipeline设计)
+    - [插件机制](docs/browserify.md#插件机制)
+    - [Transform机制](docs/browserify.md#transform机制)
   - [tools](docs/tools.md)
 
 [Node.js]: https://nodejs.org/

@@ -131,7 +131,7 @@ exports.abs = function (v) {
 
 因此，输入是一系列入口模块，输出是一个如上的字符串。
 
-## 设计
+## pipeline设计
 模块机制是比较独立的东西，可以抽象出来。
 这便是[`browser-pack`]的功能：
 给定若干模块对象，生成前面描述的JS文件。
@@ -149,7 +149,6 @@ exports.abs = function (v) {
 整体看来，实际上就是将一个初始的模块对象`{ file: moduleFile }`，
 变换成丰富的内容`{ file: moduleFile, id: id, source: source, deps: {} }`。
 
-### b.pipeline
 所有这一系列变换，是通过一个[`pipeline`]完成的：
 ```js
     var pipeline = splicer.obj([
