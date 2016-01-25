@@ -18,6 +18,7 @@
     "browserify": "^13.0.0",
     "gulp": "^3.9.0",
     "merge-stream": "^1.0.0",
-    "split2": "^1.1.1"
+    "split2": "^1.1.1",
+    "through2": "^2.0.0"
   }
 }

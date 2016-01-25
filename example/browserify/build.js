@@ -1,5 +1,8 @@
 var browserify = require('browserify')
+var fs = require('fs')
 
-browserify(__dirname + '/src/main.js')
+browserify('src/main.js', { basedir: __dirname })
+  .on('log', console.log.bind(console))
+  .plugin('./log')
   .bundle()
-  .pipe(process.stdout)
+  .pipe(fs.createWriteStream(__dirname + '/bundle.js'))

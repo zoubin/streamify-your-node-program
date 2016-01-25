@@ -149,6 +149,7 @@ exports.abs = function (v) {
 整体看来，实际上就是将一个初始的模块对象`{ file: moduleFile }`，
 变换成丰富的内容`{ file: moduleFile, id: id, source: source, deps: {} }`。
 
+### b.pipeline
 所有这一系列变换，是通过一个[`pipeline`]完成的：
 ```js
     var pipeline = splicer.obj([
@@ -176,13 +177,102 @@ exports.abs = function (v) {
 
 `splicer`是模块[`labeled-stream-splicer`]暴露的接口。
 `splicer.obj`创建了一个`Duplex`对象（`objectMode`），
-其本质是将一系列`Duplex`对象通过`pipe`连接起来，
-并且可像数组的`splice`, `push`, `pop`等操作那样去修改连接的`Duplex`对象。
+其本质是将一系列`Duplex`对象（包括`Transform`对象）通过`pipe`连接起来，
+并且可像数组那样使用`splice`, `push`, `pop`去操作内部连接的`Duplex`对象。
 
-譬如：
+`b.pipeline`中各阶段的功能描述具体见[这里](https://github.com/substack/browserify-handbook#labeled-phases)。
+
+从`record`到`pack`阶段，流动的都是模块对象。
+这里一般称一个模块对象为`row`。`row.file`即文件路径，`row.source`即文件内容。
+
+`deps`阶段的`Transform`对象是`this._mdeps`，
+即[`module-deps`]生成的`Transform`，
+其作用便是从一些入口`row`，
+通过语法解析`require`，检测出所有用到的`row`，
+生成`row.deps`字段，并输出这些`row`。
+
+## 插件机制
+了解[`browserify`]的插件机制，便能理解为什么要使用[`labeled-stream-splicer`]去创建`b.pipeline`了。
+
+先为[`browserify`]提供一个打包时间统计的功能：
+
+**log.js**
+
+```js
+var through = require('through2')
+
+module.exports = function (b) {
+  b.on('reset', reset)
+  reset()
+  
+  function reset () {
+    var time = null
+    var bytes = 0
+    b.pipeline.get('record').on('end', function () {
+      time = Date.now()
+    })
+    
+    b.pipeline.get('wrap').push(through(write, end))
+    function write (buf, enc, next) {
+      bytes += buf.length
+      this.push(buf)
+      next()
+    }
+    function end () {
+      var delta = Date.now() - time
+      b.emit('time', delta)
+      b.emit('bytes', bytes)
+      b.emit('log', bytes + ' bytes written ('
+        + (delta / 1000).toFixed(2) + ' seconds)'
+      )
+      this.push(null)
+    }
+  }
+}
+
+```
+
+`b.pipeline.get('record')`会获取前面的`this._recorder()`生成的`Transform`对象，
+监听`end`事件，记录入口模块全部写入的时刻，作为打包的开始时刻。
+
+然后通过`b.pipeline.get('wrap')`拿到`pipeline`中最后一个`Transform`对象（实则为`PassThrough`），
+然后通过`push`方法将`through`生成的`Transform`添加到这个`pipeline`中。
+由于`pack`对应的[`browser-pack`]，所以`wrap`阶段结束时，打包也已经结束。
+
+**build.js**
+```js
+var browserify = require('browserify')
+var fs = require('fs')
+
+browserify('src/main.js', { basedir: __dirname })
+  .on('log', console.log.bind(console))
+  .plugin('./log')
+  .bundle()
+  .pipe(fs.createWriteStream(__dirname + '/bundle.js'))
+
+```
+
+`b.plugin`实际上就是执行`log.js`提供的函数，
+从而按上面描述的方式修改了`b.pipeline`，
+```
+⌘ node example/browserify/build.js
+669 bytes written (0.03 seconds)
+
+```
+
+可见，[`browserify`]的插件机制，
+为用户提供了修改`b.pipeline`的基础，
+而这个基础，是由[`labeled-stream-splicer`]实现的。
+
+反过来看，利用[`labeled-stream-splicer`]这样的工具，
+可以构造一个易于修改的`pipeline`，
+从而实现一套灵活的插件机制。
+
+## Transform机制
+除了修改
 
 
-
+[`though`]: https://github.com/rvagg/through2
 [`browserify`]: https://github.com/substack/node-browserify
 [`browser-pack`]: https://github.com/substack/browser-pack
 [`module-deps`]: https://github.com/substack/module-deps
