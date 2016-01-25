@@ -269,10 +269,62 @@ browserify('src/main.js', { basedir: __dirname })
 从而实现一套灵活的插件机制。
 
 ## Transform机制
-除了修改
+除了修改`b.pipeline`外，很多时候需要对文件内容进行修改。
+譬如[`envify`]便可用来替换代码中的`process.env.NODE_ENV === "development"`表达式。
+
+[`browserify`]是通过它的Transform机制来实现的。
+
+这里举一个简单的例子，在所有文件后加一行注释：
+
+**comment.js**
+
+```js
+var through = require('through2')
+
+module.exports = function (file) {
+  return through(function (buf, enc, next) {
+    next(null, buf)
+  }, function (next) {
+    this.push('/* AWESOME ' + file + '*/')
+    next()
+  })
+}
+
+
+```
+
+
+```
+⌘ node example/browserify/build-transform.js
+
+```
+
+```js
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var math = require('./math')
+
+console.log(
+  math.abs(-1)
+)
+
+/* AWESOME /Users/zoubin/usr/src/zoub.in/stream-handbook/example/browserify/src/main.js*/
+},{"./math":2}],2:[function(require,module,exports){
+exports.abs = function (v) {
+  return v < 0 ? -v : v
+}
+
+/* AWESOME /Users/zoubin/usr/src/zoub.in/stream-handbook/example/browserify/src/math.js*/
+},{}]},{},[1]);
+
+```
+
+这套机制是在[`module-deps`]中支持的，在读取文件内容后，
+会根据指定的`Transform`创建一个`pipeline`对象（`Duplex`），
+然后将文件内容写入，并接收`pipeline`的输出作为`row.source`。
 
 
 [`though`]: https://github.com/rvagg/through2
+[`envify`]: https://github.com/hughsk/envify
 [`browserify`]: https://github.com/substack/node-browserify
 [`browser-pack`]: https://github.com/substack/browser-pack
 [`module-deps`]: https://github.com/substack/module-deps
