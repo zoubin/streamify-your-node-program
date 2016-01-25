@@ -28,6 +28,9 @@
   - [从push到pull](docs/pipe.md#从push到pull)
   - [pipeline](docs/pipe.md#pipeline)
 - [Node实现的CommonJS规范](docs/node-module.md)
+- 实战技巧
+  - [browserify](docs/browserify.md)
+  - [tools](docs/tools.md)
 
 [Node.js]: https://nodejs.org/
 [stream]: https://nodejs.org/api/stream.html
