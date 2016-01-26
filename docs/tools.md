@@ -1,12 +1,12 @@
 # Tools
-- [`through2`]
-- [`merge-stream`]
-- [`concat-stream`]
-- [`sink-transform`]
-- [`duplexer2`]
-- [`stream-combiner2`]
-- [`stream-splicer`]
-- [`labeled-stream-splicer`]
+- [through2](#through2)
+- [merge-stream](#merge-stream)
+- [concat-stream](#concat-stream)
+- [sink-transform](#sink-transform)
+- [duplexer2](#duplexer2)
+- [stream-combiner2](#stream-combiner2)
+- [stream-splicer](#stream-splicer)
+- [labeled-stream-splicer](#labeled-stream-splicer)
 
 ## through2
 [`through2`]可用来方便的创建一个`Transform`。
@@ -20,6 +20,8 @@ var transform = through(_transform, _flush)
 var transform = through.obj(_transform, _flush)
 
 ```
+
+等价于：
 
 ```js
 var Transform = require('stream').Transform
@@ -38,8 +40,34 @@ var transform = Transform({
 
 ```
 
+虽然现在看来[`through2`]的接口并没比原生的方便多少，但它为生成的`Transform`提供了一个`destroy(err)`方法，
+执行该方法会触发`close`事件，
+而在使用`src.pipe(dest)`连接两个流时，会监听一系列事件，
+其中有一个便是`close`事件，其行为便是清除所有事件监听，
+并且调用`src.unpipe(dest)`。
+所以，如果因为流的使用而带来内存泄漏，可以考虑在适当的时机调用`destroy`方法。
+
+下面便是[`through2`]提供的`destroy`方法。
+
+```js
+DestroyableTransform.prototype.destroy = function(err) {
+  if (this._destroyed) return
+  this._destroyed = true
+  
+  var self = this
+  process.nextTick(function() {
+    if (err)
+      self.emit('error', err)
+    self.emit('close')
+  })
+}
+
+```
+
+当然，也可以直接`dest.emit('close')`。
+
 ## merge-stream
-合并多个可读流，生成一个可读流。
+[`merge-stream`]合并多个可读流，生成一个可读流。
 
 ```js
 var merge = require('merge-stream')
