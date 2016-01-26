@@ -45,6 +45,7 @@
   - [pipeline设计](docs/browserify.md#pipeline设计)
   - [插件机制](docs/browserify.md#插件机制)
   - [Transform机制](docs/browserify.md#transform机制)
+- [Gulp](docs/gulp.md)
 - 附录
   - [Node实现的CommonJS规范](docs/node-module.md)
 
