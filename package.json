@@ -14,15 +14,19 @@
   },
   "homepage": "https://github.com/zoubin/stream-handbook#readme",
   "dependencies": {
+    "JSONStream": "^1.0.7",
     "ansi-escape": "^1.1.0",
     "browserify": "^13.0.0",
     "concat-stream": "^1.5.1",
     "duplexer2": "^0.1.4",
     "gulp": "^3.9.0",
+    "labeled-stream-splicer": "^2.0.0",
     "merge-stream": "^1.0.0",
     "morse": "^0.1.0",
     "sink-transform": "^1.0.0",
     "split2": "^1.1.1",
+    "stream-combiner2": "^1.1.1",
+    "stream-splicer": "^2.0.0",
     "through2": "^2.0.0"
   }
 }

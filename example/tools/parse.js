@@ -3,21 +3,6 @@ var duplexer = require('duplexer2')
 
 module.exports = parse
 
-if (require.main === module) {
-  parseGitLog()
-}
-
-function parseGitLog() {
-  var JSONStream = require('JSONStream')
-  var spawn = require('child_process').spawn
-  var split = require('split2')
-  spawn('git', ['log']).stdout
-    .pipe(split())
-    .pipe(parse())
-    .pipe(JSONStream.stringify())
-    .pipe(process.stdout)
-}
-
 function parse() {
   var parser = Parser()
 
@@ -61,12 +46,27 @@ function Parser() {
       line = line.toString()
       var matches = line.match(/^(\w+):?/)
       if (matches) {
-        this.emit('header', matches[1], line.slice(matches[1].length + 1).trim())
+        this.emit('header', matches[1].toLowerCase(), line.slice(matches[1].length + 1).trim())
       } else {
         this.emit('message', line)
       }
       next()
     },
   })
+}
+
+if (require.main === module) {
+  parseGitLog()
+}
+
+function parseGitLog() {
+  var JSONStream = require('JSONStream')
+  var spawn = require('child_process').spawn
+  var split = require('split2')
+  spawn('git', ['log']).stdout
+    .pipe(split())
+    .pipe(parse())
+    .pipe(JSONStream.stringify())
+    .pipe(process.stdout)
 }
 
