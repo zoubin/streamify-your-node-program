@@ -82,7 +82,7 @@ gulp.task('rename', ['clean'], function () {
 
 ```
 
-足可见，[`gulp`]的插件就是一个`Dupex`（包括`Transform`）对象。
+足可见，[`gulp`]的插件就是一个`Duplex`（包括`Transform`）对象。
 所以，前面提到的工具都可以使用。
 
 譬如：
