@@ -21,13 +21,14 @@ class ToReadable extends Readable {
 module.exports = ToReadable
 
 if (require.main === module) {
-  var source = function *(limit) {
+  var iterable = function *(limit) {
     while (limit--) {
       yield Math.random()
     }
   }(1e10)
 
-  const rs = new ToReadable(source)
-  rs.pipe(process.stdout)
+  const readable = new ToReadable(iterable)
+  readable.on('data', data => process.stdout.write(data))
+  readable.on('end', () => process.stdout.write('DONE'))
 }
 

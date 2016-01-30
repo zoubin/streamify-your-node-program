@@ -1,25 +1,20 @@
 'use strict'
-var Transform = require('stream').Transform
-var morse = require('morse')
+const Transform = require('stream').Transform
 
-class Morsify extends Transform {
+class ToUpperCase extends Transform {
   constructor() {
     super()
   }
-  _transform(buf, enc, next) {
-    const word = buf.toString().toUpperCase()
-    this.push(morse.encode(word) + '\n\n')
+  _transform(data, enc, next) {
+    this.push(data.toString().toUpperCase())
     next()
   }
 }
 
-process.stdin
-  .pipe(Transform({
-    objectMode: true,
-    transform: function (buf, enc, next) {
-      next(null, buf.toString().replace(/\n/g, ''))
-    }
-  }))
-  .pipe(new Morsify())
-  .pipe(process.stdout)
+const transform = new ToUpperCase()
+transform.on('data', data => process.stdout.write(data))
+
+transform.write('hello, ')
+transform.write('world!')
+transform.end()
 

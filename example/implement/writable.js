@@ -1,15 +1,15 @@
 'use strict'
 var Writable = require('stream').Writable
 
-class PrintUpperCase extends Writable {
-  constructor() {
-    super()
-  }
-  _write(buf, enc, next) {
-    process.stdout.write(buf.toString().toUpperCase())
-    process.nextTick(next)
-  }
+const writable = Writable()
+writable._write = function (data, enc, next) {
+  process.stdout.write(data.toString().toUpperCase())
+  process.nextTick(next)
 }
 
-process.stdin.pipe(new PrintUpperCase())
+writable.on('finish', () => process.stdout.write('DONE'))
+
+writable.write('a' + '\n')
+writable.write('b' + '\n')
+writable.end('c' + '\n')
 
