@@ -1,5 +1,5 @@
-var fs = require('fs')
-fs.readFile('example/ua.txt', function (err, body) {
+const fs = require('fs')
+fs.readFile(__dirname + '/ua.txt', function (err, body) {
   console.log(body)
   console.log(body.toString())
 })

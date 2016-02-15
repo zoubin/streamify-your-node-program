@@ -1,3 +1,3 @@
-var fs = require('fs')
-fs.createReadStream('example/ua.txt').pipe(process.stdout)
+const fs = require('fs')
+fs.createReadStream(__dirname + '/ua.txt').pipe(process.stdout)
 

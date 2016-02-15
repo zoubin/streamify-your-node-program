@@ -1,5 +1,5 @@
 # Node Stream
-对[Node.js]中[stream]模块的学习积累和理解。
+[升级版](https://github.com/zoubin/engineering/blob/master/docs/node-stream/index.md)。
 
 - [什么是流](docs/what-is-stream.md)
 - [为什么使用流](docs/when-to-use-stream.md)
@@ -48,7 +48,4 @@
 - [Gulp](docs/gulp.md)
 - 附录
   - [Node实现的CommonJS规范](docs/node-module.md)
-
-[Node.js]: https://nodejs.org/
-[stream]: https://nodejs.org/api/stream.html
 
