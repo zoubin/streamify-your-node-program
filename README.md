@@ -1,5 +1,9 @@
 # Node Stream
-[升级版](https://github.com/zoubin/engineering/blob/master/docs/node-stream/index.md)。
+
+## 精华版
+[Node.js Stream](https://github.com/zoubin/engineering/blob/master/docs/node-stream/index.md)
+
+## 目录
 
 - [什么是流](docs/what-is-stream.md)
 - [为什么使用流](docs/when-to-use-stream.md)
