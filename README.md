@@ -1,7 +1,9 @@
 # Node Stream
 
 ## 精华版
-[Node.js Stream](https://github.com/zoubin/engineering/blob/master/docs/node-stream/index.md)
+* [基础篇](http://fe.meituan.com/stream-basics.html)
+* [进阶篇](http://fe.meituan.com/stream-internals.html)
+* [实战篇](http://fe.meituan.com/stream-in-action.html)
 
 ## 目录
 
