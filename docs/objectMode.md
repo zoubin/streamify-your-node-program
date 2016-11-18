@@ -116,7 +116,7 @@ end
 
 （注意，非`objectMode`时`push('')`实际是会修改内部状态的，
 会有一定的副作用，一般不要如此。
-见[这里](https://nodejs.org/api/stream.html#stream_stream_push)）
+见[这里](https://nodejs.org/api/stream.html#stream_readable_push)）
 
 **要点**
 * `objectMode`时，可`push`任意类型的数据，消耗时会逐个消耗同样的数据
