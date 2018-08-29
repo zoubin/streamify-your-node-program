@@ -1,9 +1,9 @@
 # Node Stream
 
 ## 精华版
-* [基础篇](http://fe.meituan.com/stream-basics.html)
-* [进阶篇](http://fe.meituan.com/stream-internals.html)
-* [实战篇](http://fe.meituan.com/stream-in-action.html)
+* [基础篇](https://tech.meituan.com/stream-basics.html)
+* [进阶篇](http://tech.meituan.com/stream-internals.html)
+* [实战篇](http://tech.meituan.com/stream-in-action.html)
 
 ## 目录
 
